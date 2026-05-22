@@ -5,16 +5,30 @@
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
+const tintColorLight = '#D8461F';
 const tintColorDark = '#fff';
+
+export const TkimphPalette = {
+  ink: '#071225',
+  muted: '#8B93A6',
+  line: '#EAEEF4',
+  canvas: '#F7F8FA',
+  surface: '#FFFFFF',
+  primary: '#1E8544',
+  primaryDark: '#146632',
+  green: '#1E8544',
+  yellow: '#FFD018',
+  blue: '#2563EB',
+  orange: '#FFB74D',
+};
 
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
+    text: TkimphPalette.ink,
+    background: TkimphPalette.canvas,
     tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
+    icon: TkimphPalette.muted,
+    tabIconDefault: TkimphPalette.muted,
     tabIconSelected: tintColorLight,
   },
   dark: {
