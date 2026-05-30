@@ -9,6 +9,7 @@ let nativeToken: string | null = null;
 let nativeUser: AuthUser | null = null;
 const TOKEN_KEY = 'tkimph:auth-token';
 const USER_KEY = 'tkimph:auth-user';
+const EXPO_PUSH_TOKEN_KEY = 'tkimph:expo-push-token';
 const authListeners = new Set<() => void>();
 
 export type UserRole = 'customer' | 'restaurant_owner' | 'rider' | 'admin' | string;
@@ -27,6 +28,15 @@ export type AuthUser = {
 export type AuthResponse = {
   token: string;
   user: AuthUser;
+};
+
+export type PushTokenPayload = {
+  expo_push_token: string;
+  platform?: 'ios' | 'android' | 'web';
+  device_id?: string | null;
+  device_name?: string | null;
+  app_version?: string | null;
+  enabled?: boolean;
 };
 
 export type PublicRestaurant = {
@@ -608,6 +618,45 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
   return response.json() as Promise<T>;
 }
 
+export async function cacheExpoPushToken(token: string | null) {
+  if (!token) {
+    await AsyncStorage.removeItem(EXPO_PUSH_TOKEN_KEY);
+    return;
+  }
+  await AsyncStorage.setItem(EXPO_PUSH_TOKEN_KEY, token);
+}
+
+export function getCachedExpoPushToken() {
+  return AsyncStorage.getItem(EXPO_PUSH_TOKEN_KEY);
+}
+
+export function registerExpoPushToken(payload: PushTokenPayload) {
+  return request<{ message: string; token: { id: number; enabled: boolean; platform?: string | null } }>('/me/push-token', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function unregisterCachedExpoPushToken(authToken = getStoredToken()) {
+  const expoPushToken = await getCachedExpoPushToken();
+  if (!expoPushToken || !authToken) {
+    await cacheExpoPushToken(null);
+    return;
+  }
+
+  await fetch(`${API_URL}/me/push-token`, {
+    method: 'DELETE',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${authToken}`,
+    },
+    body: JSON.stringify({ expo_push_token: expoPushToken }),
+  }).catch(() => undefined);
+
+  await cacheExpoPushToken(null);
+}
+
 export async function login(email: string, password: string): Promise<AuthResponse> {
   const session = await request<AuthResponse>('/login', {
     method: 'POST',
@@ -620,11 +669,12 @@ export async function login(email: string, password: string): Promise<AuthRespon
   return session;
 }
 
-export function logout(): Promise<void> {
+export async function logout(): Promise<void> {
   const token = getStoredToken();
+  await unregisterCachedExpoPushToken(token);
   clearSession();
-  if (!token) return Promise.resolve();
-  return request<void>('/logout', {
+  if (!token) return;
+  await request<void>('/logout', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
   }).catch(() => undefined);
