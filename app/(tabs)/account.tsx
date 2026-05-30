@@ -30,6 +30,13 @@ const accountActions = [
     color: '#FEF3C7',
     route: '/account/support',
   },
+  {
+    title: 'Notifications',
+    subtitle: 'Push alerts, order updates, and message history',
+    icon: 'notifications-none',
+    color: '#E8F3ED',
+    route: '/notifications',
+  },
 ] as const;
 
 const restaurantActions = [

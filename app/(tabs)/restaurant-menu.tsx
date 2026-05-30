@@ -2,7 +2,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { Card, MobileShell } from '@/components/mobile-shell';
+import { MobileShell } from '@/components/mobile-shell';
 import {
   formatPartnerMoney,
   PartnerActionButton,

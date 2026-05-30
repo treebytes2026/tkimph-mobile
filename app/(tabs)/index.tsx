@@ -8,6 +8,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { LoadingState } from '@/components/loading-state';
 import { Card, MobileShell } from '@/components/mobile-shell';
 import { useCart } from '@/contexts/cart-context';
+import { useNotifications } from '@/contexts/notification-context';
 import { TkimphPalette } from '@/constants/theme';
 import { fetchPublicRestaurants, publicFileUrl, PublicRestaurant } from '@/lib/api';
 import { blurActiveElement } from '@/lib/focus';
@@ -20,11 +21,6 @@ const categories = [
 ] as const;
 const LOCATION_LABEL_KEY = 'tkimph:customer-location-label';
 
-function deliveryText(fee?: number) {
-  if (typeof fee !== 'number') return 'Delivery set by admin';
-  return `Standard delivery \u20B1${fee}`;
-}
-
 export default function HomeScreen() {
   const [feed, setFeed] = useState<PublicRestaurant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,6 +31,7 @@ export default function HomeScreen() {
   const [favorites, setFavorites] = useState<Record<number, boolean>>({});
   const router = useRouter();
   const { cartCount } = useCart();
+  const { unreadCount } = useNotifications();
 
   function toggleFavorite(id: number) {
     setFavorites((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -108,7 +105,20 @@ export default function HomeScreen() {
           </Text>
         </View>
         <View style={styles.headerActions}>
-          <RoundIcon name="notifications-none" />
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              blurActiveElement();
+              router.push('/notifications' as never);
+            }}
+          >
+            <RoundIcon name="notifications-none" />
+            {unreadCount > 0 ? (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+              </View>
+            ) : null}
+          </Pressable>
           <Pressable
             accessibilityRole="button"
             onPress={() => {
@@ -287,13 +297,13 @@ function HeroBackdrop() {
     { left: 312, width: 26, height: 44 },
     { left: 342, width: 16, height: 24 },
   ];
-  const sparkles: Array<{
+  const sparkles: {
     top?: number;
     bottom?: number;
     left?: number;
     right?: number;
     size: number;
-  }> = [
+  }[] = [
     { top: 28, right: 14, size: 9 },
     { top: 52, right: 38, size: 5 },
     { top: 82, right: 8, size: 6 },
