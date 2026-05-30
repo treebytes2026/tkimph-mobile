@@ -270,7 +270,13 @@ export default function RestaurantDetailScreen() {
                           {item.description ? <Text style={styles.itemDescription} numberOfLines={3}>{item.description}</Text> : null}
                         </View>
                         <View style={styles.itemImageWrap}>
-                          {img ? <Image source={{ uri: img }} style={styles.itemImage} /> : <View style={styles.itemImage} />}
+                          {img ? (
+                            <Image source={{ uri: img }} style={styles.itemImage} resizeMode="cover" />
+                          ) : (
+                            <View style={[styles.itemImage, styles.itemImageFallback]}>
+                              <MaterialIcons color={TkimphPalette.muted} name="restaurant" size={28} />
+                            </View>
+                          )}
                           <View style={styles.addBubble}>
                             <Text style={styles.addBubbleText}>{line ? line.qty : '+'}</Text>
                           </View>
@@ -706,13 +712,19 @@ const styles = StyleSheet.create({
   },
   itemImageWrap: {
     backgroundColor: '#DDE3EA',
+    height: 132,
     position: 'relative',
     width: 112,
   },
   itemImage: {
     backgroundColor: '#DDE3EA',
-    height: '100%',
-    width: '100%',
+    height: 132,
+    width: 112,
+  },
+  itemImageFallback: {
+    alignItems: 'center',
+    backgroundColor: '#EEF2F6',
+    justifyContent: 'center',
   },
   addBubble: {
     alignItems: 'center',

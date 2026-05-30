@@ -56,6 +56,30 @@ const restaurantActions = [
   },
 ] as const;
 
+const legalActions = [
+  {
+    title: 'Terms & Conditions',
+    subtitle: 'The rules for using TKimph',
+    icon: 'gavel',
+    color: '#E0F2FE',
+    route: '/legal/terms',
+  },
+  {
+    title: 'Privacy Policy',
+    subtitle: 'How we handle your information',
+    icon: 'privacy-tip',
+    color: '#DCFCE7',
+    route: '/legal/privacy',
+  },
+  {
+    title: 'Cookie Policy',
+    subtitle: 'How we use cookies and storage',
+    icon: 'cookie',
+    color: '#FEF3C7',
+    route: '/legal/cookies',
+  },
+] as const;
+
 function blurActiveElement() {
   if (Platform.OS !== 'web') return;
   const active = document.activeElement;
@@ -145,6 +169,19 @@ export default function ProfileScreen() {
             <PrimaryButton disabled={loading || !email || !password} icon="login" label={loading ? 'Signing in' : 'Sign in'} onPress={handleLogin} />
           </View>
         </View>
+        <View style={styles.legalLinksRow}>
+          {legalActions.map((item) => (
+            <Pressable
+              key={item.title}
+              accessibilityRole="link"
+              onPress={() => {
+                blurActiveElement();
+                router.push(item.route as never);
+              }}>
+              <Text style={styles.legalLinkText}>{item.title}</Text>
+            </Pressable>
+          ))}
+        </View>
       </MobileShell>
     );
   }
@@ -222,6 +259,28 @@ export default function ProfileScreen() {
                 ))
               : null}
             {accountActions.map((item) => (
+              <Pressable
+                key={item.title}
+                onPress={() => {
+                  blurActiveElement();
+                  router.push(item.route as never);
+                }}
+                style={styles.menuItem}>
+                <View style={[styles.menuIcon, { backgroundColor: item.color }]}>
+                  <MaterialIcons color={TkimphPalette.green} name={item.icon} size={22} />
+                </View>
+                <View style={styles.menuText}>
+                  <Text style={styles.menuTitle}>{item.title}</Text>
+                  <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
+                </View>
+                <MaterialIcons color="#CBD5E1" name="chevron-right" size={22} />
+              </Pressable>
+            ))}
+          </View>
+
+          <Text style={styles.sectionLabel}>Legal</Text>
+          <View style={styles.menuCard}>
+            {legalActions.map((item) => (
               <Pressable
                 key={item.title}
                 onPress={() => {
@@ -460,6 +519,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginTop: 14,
     overflow: 'hidden',
+  },
+  sectionLabel: {
+    color: TkimphPalette.muted,
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    marginTop: 22,
+    textTransform: 'uppercase',
+  },
+  legalLinksRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    justifyContent: 'center',
+    marginTop: 22,
+  },
+  legalLinkText: {
+    color: TkimphPalette.muted,
+    fontSize: 13,
+    fontWeight: '700',
   },
   menuItem: {
     alignItems: 'center',

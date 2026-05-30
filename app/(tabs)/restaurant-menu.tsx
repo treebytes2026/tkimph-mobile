@@ -8,9 +8,8 @@ import {
   PartnerActionButton,
   PartnerEmpty,
   PartnerNotice,
-  StatusChip,
 } from '@/components/restaurant-workflow';
-import { BodyText, Kicker, ScreenTitle, SectionHeader } from '@/components/ui-kit';
+import { BodyText, Kicker, ScreenTitle } from '@/components/ui-kit';
 import { TkimphPalette } from '@/constants/theme';
 import { hasRestaurantOwnerSession, useAuthSession } from '@/hooks/use-auth-session';
 import {
@@ -513,95 +512,60 @@ export default function RestaurantMenuScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.menuTabs}>
             {menus.map((menu) => {
               const active = selectedMenu?.id === menu.id;
+              const count = menu.items_count ?? menu.items?.length ?? 0;
               return (
-                <Pressable key={menu.id} onPress={() => void selectMenu(menu)} style={[styles.menuTab, active && styles.menuTabActive]}>
+                <Pressable
+                  key={menu.id}
+                  onPress={() => void selectMenu(menu)}
+                  style={[styles.menuTab, active && styles.menuTabActive]}
+                >
                   <Text style={[styles.menuTabText, active && styles.menuTabTextActive]}>{menu.name}</Text>
-                  <Text style={[styles.menuTabCount, active && styles.menuTabTextActive]}>{menu.items_count ?? menu.items?.length ?? 0}</Text>
+                  <View style={[styles.menuTabCountPill, active && styles.menuTabCountPillActive]}>
+                    <Text style={[styles.menuTabCountText, active && styles.menuTabCountTextActive]}>{count}</Text>
+                  </View>
                 </Pressable>
               );
             })}
           </ScrollView>
 
           {selectedMenu ? (
-            <Card>
-              <View style={styles.rowBetween}>
-                <View style={styles.flex}>
-                  <Text style={styles.menuTitle}>{selectedMenu.name}</Text>
-                  <Text style={styles.meta}>{availableItems} available of {selectedMenu.items?.length ?? 0} items</Text>
-                </View>
-                <StatusChip tone={selectedMenu.is_active ? 'green' : 'yellow'}>{selectedMenu.is_active ? 'active' : 'inactive'}</StatusChip>
-              </View>
-              <View style={styles.cardActions}>
-                <PartnerActionButton
-                  compact
-                  tone={selectedMenu.is_active ? 'yellow' : 'green'}
-                  icon={selectedMenu.is_active ? 'pause' : 'play-arrow'}
-                  label={actingKey === `menu-${selectedMenu.id}` ? 'Updating' : selectedMenu.is_active ? 'Disable menu' : 'Enable menu'}
-                  disabled={actingKey === `menu-${selectedMenu.id}`}
-                  onPress={() => void toggleMenu(selectedMenu)}
-                />
-                <PartnerActionButton compact tone="outline" icon="edit" label="Edit menu" onPress={() => openMenuEditor(selectedMenu)} />
-                <PartnerActionButton compact tone="red" icon="delete" label="Delete" onPress={() => setDeleteMenuTarget(selectedMenu)} />
-              </View>
-            </Card>
+            <MenuSummaryCard
+              menu={selectedMenu}
+              availableCount={availableItems}
+              acting={actingKey === `menu-${selectedMenu.id}`}
+              onToggle={() => void toggleMenu(selectedMenu)}
+              onEdit={() => openMenuEditor(selectedMenu)}
+              onDelete={() => setDeleteMenuTarget(selectedMenu)}
+            />
           ) : null}
 
-          <SectionHeader title="Items" action={`${selectedMenu?.items?.length ?? 0} shown`} />
-          {selectedMenu ? (
-            <View style={styles.addItemRow}>
-              <PartnerActionButton compact icon="add" label="Add dish" onPress={openItemCreator} />
+          <View style={styles.itemsHeader}>
+            <View>
+              <Text style={styles.itemsTitle}>Items</Text>
+              <Text style={styles.itemsSub}>{selectedMenu?.items?.length ?? 0} dishes</Text>
             </View>
-          ) : null}
+            {selectedMenu ? (
+              <PartnerActionButton compact icon="add" label="Add dish" onPress={openItemCreator} />
+            ) : null}
+          </View>
           {loadingMenuId === selectedMenu?.id ? (
             <PartnerEmpty icon="hourglass-empty" title="Loading dishes" text="Fetching this menu's dishes now." />
           ) : (selectedMenu?.items ?? []).length === 0 ? (
             <PartnerEmpty icon="fastfood" title="No items in this menu" text="Items will appear here after they are added in the partner backend." />
           ) : (
             (selectedMenu?.items ?? []).map((item) => (
-              <Card key={item.id}>
-                <View style={styles.itemHeader}>
-                  {item.image_url ? (
-                    <Image source={{ uri: item.image_url }} style={styles.itemImage} />
-                  ) : (
-                    <View style={styles.itemImageEmpty}>
-                      <MaterialIcons color={TkimphPalette.muted} name="image" size={26} />
-                    </View>
-                  )}
-                  <View style={styles.itemInfo}>
-                    <View style={styles.rowBetween}>
-                      <View style={styles.flex}>
-                        <Text style={styles.itemName}>{item.name}</Text>
-                        <Text style={styles.meta}>{itemCategory(item)} | {formatPartnerMoney(item.price)}</Text>
-                        {item.discount_enabled ? <Text style={styles.discount}>{Number(item.discount_percent || 0)}% discount active</Text> : null}
-                      </View>
-                      <StatusChip tone={item.is_available ? 'green' : 'red'}>{item.is_available ? 'available' : 'hidden'}</StatusChip>
-                    </View>
-                  </View>
-                </View>
-                <View style={styles.cardActions}>
-                  <PartnerActionButton
-                    compact
-                    tone={item.is_available ? 'yellow' : 'green'}
-                    icon={item.is_available ? 'visibility-off' : 'visibility'}
-                    label={actingKey === `item-${item.id}` ? 'Updating' : item.is_available ? 'Mark unavailable' : 'Mark available'}
-                    disabled={actingKey === `item-${item.id}`}
-                    onPress={() => void toggleItem(item)}
-                  />
-                  <PartnerActionButton compact tone="outline" icon="edit" label="Edit item" onPress={() => openItemEditor(item)} />
-                  <PartnerActionButton
-                    compact
-                    tone="outline"
-                    icon="image"
-                    label={item.image_url ? 'Replace image' : 'Upload image'}
-                    disabled={actingKey === `item-image-${item.id}`}
-                    onPress={() => void uploadItemImage(item)}
-                  />
-                  {item.image_url ? (
-                    <PartnerActionButton compact tone="outline" icon="hide-image" label="Remove image" onPress={() => void deleteItemImage(item)} />
-                  ) : null}
-                  <PartnerActionButton compact tone="red" icon="delete" label="Delete" onPress={() => setDeleteItemTarget(item)} />
-                </View>
-              </Card>
+              <DishCard
+                key={item.id}
+                item={item}
+                actingToggle={actingKey === `item-${item.id}`}
+                actingImage={actingKey === `item-image-${item.id}`}
+                category={itemCategory(item)}
+                onToggle={() => void toggleItem(item)}
+                onEdit={() => openItemEditor(item)}
+                onUploadImage={() => void uploadItemImage(item)}
+                onRemoveImage={() => void deleteItemImage(item)}
+                onDelete={() => setDeleteItemTarget(item)}
+              />
             ))
           )}
         </>
@@ -831,6 +795,174 @@ function ToggleRow({ label, active, onPress }: { label: string; active: boolean;
   );
 }
 
+function DishCard({
+  item,
+  category,
+  actingToggle,
+  actingImage,
+  onToggle,
+  onEdit,
+  onUploadImage,
+  onRemoveImage,
+  onDelete,
+}: {
+  item: PartnerMenuItem;
+  category: string;
+  actingToggle: boolean;
+  actingImage: boolean;
+  onToggle: () => void;
+  onEdit: () => void;
+  onUploadImage: () => void;
+  onRemoveImage: () => void;
+  onDelete: () => void;
+}) {
+  const available = !!item.is_available;
+  const accent = available ? TkimphPalette.green : '#94A3B8';
+  return (
+    <View style={[styles.dishCard, !available && styles.dishCardMuted]}>
+      <View style={styles.dishRow}>
+        {item.image_url ? (
+          <Image source={{ uri: item.image_url }} style={styles.itemImage} />
+        ) : (
+          <View style={styles.itemImageEmpty}>
+            <MaterialIcons color={TkimphPalette.muted} name="restaurant" size={26} />
+          </View>
+        )}
+        <View style={styles.dishInfo}>
+          <View style={styles.dishNameRow}>
+            <Text numberOfLines={1} style={[styles.itemName, !available && { color: '#64748B' }]}>
+              {item.name}
+            </Text>
+            <View style={[styles.availPill, { backgroundColor: available ? '#E6F8EC' : '#F1F5F9', borderColor: accent }]}>
+              <View style={[styles.openDot, { backgroundColor: accent }]} />
+              <Text style={[styles.availPillText, { color: accent }]}>{available ? 'Available' : 'Hidden'}</Text>
+            </View>
+          </View>
+          <View style={styles.dishMetaRow}>
+            <View style={styles.categoryChip}>
+              <Text style={styles.categoryChipText}>{category}</Text>
+            </View>
+            <Text style={styles.dishPrice}>{formatPartnerMoney(item.price)}</Text>
+          </View>
+          {item.discount_enabled ? (
+            <View style={styles.discountChip}>
+              <MaterialIcons color={TkimphPalette.green} name="local-offer" size={12} />
+              <Text style={styles.discountChipText}>{Number(item.discount_percent || 0)}% off</Text>
+            </View>
+          ) : null}
+        </View>
+      </View>
+
+      <View style={styles.dishActions}>
+        <PartnerActionButton
+          compact
+          tone={available ? 'yellow' : 'green'}
+          icon={available ? 'visibility-off' : 'visibility'}
+          label={actingToggle ? 'Updating' : available ? 'Mark unavailable' : 'Mark available'}
+          disabled={actingToggle}
+          onPress={onToggle}
+        />
+        <View style={styles.iconButtonRow}>
+          <IconButton icon="edit" label="Edit item" onPress={onEdit} />
+          <IconButton
+            icon={item.image_url ? 'image' : 'add-photo-alternate'}
+            label={item.image_url ? 'Replace image' : 'Upload image'}
+            onPress={onUploadImage}
+          />
+          {item.image_url ? (
+            <IconButton icon="hide-image" label="Remove image" onPress={onRemoveImage} />
+          ) : null}
+          <IconButton icon="delete-outline" tone="red" label="Delete item" onPress={onDelete} />
+        </View>
+      </View>
+      {actingImage ? <Text style={styles.dishHint}>Updating image...</Text> : null}
+    </View>
+  );
+}
+
+function MenuSummaryCard({
+  menu,
+  availableCount,
+  acting,
+  onToggle,
+  onEdit,
+  onDelete,
+}: {
+  menu: PartnerMenu;
+  availableCount: number;
+  acting: boolean;
+  onToggle: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const total = menu.items?.length ?? 0;
+  const ratio = total > 0 ? Math.min(1, availableCount / total) : 0;
+  const accent = menu.is_active ? TkimphPalette.green : '#D97706';
+  return (
+    <View style={[styles.summaryCard, { borderLeftColor: accent }]}>
+      <View style={styles.summaryHead}>
+        <View style={styles.flex}>
+          <Text style={styles.menuTitle}>{menu.name}</Text>
+          <Text style={styles.summaryMeta}>
+            <Text style={styles.summaryMetaStrong}>{availableCount}</Text>
+            <Text> available of </Text>
+            <Text style={styles.summaryMetaStrong}>{total}</Text>
+            <Text> items</Text>
+          </Text>
+        </View>
+        <View style={[styles.openPill, { backgroundColor: menu.is_active ? '#E8F3ED' : '#FEF3C7', borderColor: accent }]}>
+          <View style={[styles.openDot, { backgroundColor: accent }]} />
+          <Text style={[styles.openPillText, { color: accent }]}>{menu.is_active ? 'Active' : 'Paused'}</Text>
+        </View>
+      </View>
+
+      <View style={styles.progressTrack}>
+        <View style={[styles.progressFill, { width: `${ratio * 100}%`, backgroundColor: accent }]} />
+      </View>
+
+      <View style={styles.summaryActions}>
+        <PartnerActionButton
+          compact
+          tone={menu.is_active ? 'yellow' : 'green'}
+          icon={menu.is_active ? 'pause' : 'play-arrow'}
+          label={acting ? 'Updating' : menu.is_active ? 'Disable menu' : 'Enable menu'}
+          disabled={acting}
+          onPress={onToggle}
+        />
+        <View style={styles.iconButtonRow}>
+          <IconButton icon="edit" label="Edit menu" onPress={onEdit} />
+          <IconButton icon="delete-outline" tone="red" label="Delete menu" onPress={onDelete} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function IconButton({
+  icon,
+  label,
+  onPress,
+  tone,
+}: {
+  icon: React.ComponentProps<typeof MaterialIcons>['name'];
+  label: string;
+  onPress: () => void;
+  tone?: 'red';
+}) {
+  const fg = tone === 'red' ? '#B91C1C' : TkimphPalette.ink;
+  const bg = tone === 'red' ? '#FEE2E2' : '#F1F5F9';
+  return (
+    <Pressable
+      accessibilityLabel={label}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [styles.iconButton, { backgroundColor: bg }, pressed && { opacity: 0.7 }]}
+    >
+      <MaterialIcons color={fg} name={icon} size={18} />
+    </Pressable>
+  );
+}
+
 function ConfirmModal({
   visible,
   title,
@@ -887,29 +1019,65 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderColor: '#EAEEF4',
-    borderRadius: 14,
+    borderRadius: 999,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: 7,
-    minHeight: 42,
-    paddingHorizontal: 12,
+    gap: 8,
+    minHeight: 40,
+    paddingLeft: 14,
+    paddingRight: 6,
+    paddingVertical: 6,
   },
   menuTabActive: {
-    backgroundColor: '#E8F3ED',
+    backgroundColor: TkimphPalette.green,
     borderColor: TkimphPalette.green,
   },
   menuTabText: {
-    color: TkimphPalette.muted,
+    color: TkimphPalette.ink,
     fontSize: 13,
     fontWeight: '900',
+    textTransform: 'capitalize',
   },
   menuTabTextActive: {
-    color: TkimphPalette.green,
+    color: '#FFFFFF',
   },
-  menuTabCount: {
+  menuTabCountPill: {
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 999,
+    justifyContent: 'center',
+    minWidth: 22,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  menuTabCountPillActive: {
+    backgroundColor: 'rgba(255,255,255,0.22)',
+  },
+  menuTabCountText: {
+    color: '#475467',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  menuTabCountTextActive: {
+    color: '#FFFFFF',
+  },
+  itemsHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  itemsTitle: {
+    color: TkimphPalette.ink,
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  itemsSub: {
     color: TkimphPalette.muted,
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: '800',
+    marginTop: 2,
   },
   rowBetween: {
     alignItems: 'center',
@@ -925,34 +1093,207 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '900',
   },
+  summaryCard: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#EAEEF4',
+    borderLeftWidth: 4,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 12,
+    padding: 14,
+    ...Platform.select({
+      web: { boxShadow: '0 4px 12px rgba(16, 24, 40, 0.05)' },
+      default: {
+        elevation: 2,
+        shadowColor: '#101828',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+      },
+    }),
+  },
+  summaryHead: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'space-between',
+  },
+  summaryMeta: {
+    color: TkimphPalette.muted,
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+  summaryMetaStrong: {
+    color: TkimphPalette.ink,
+    fontWeight: '900',
+  },
+  openPill: {
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  openDot: {
+    borderRadius: 4,
+    height: 8,
+    width: 8,
+  },
+  openPillText: {
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  progressTrack: {
+    backgroundColor: '#EEF2F6',
+    borderRadius: 999,
+    height: 6,
+    marginTop: 12,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    borderRadius: 999,
+    height: '100%',
+  },
+  summaryActions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'space-between',
+    marginTop: 14,
+  },
+  iconButtonRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  iconButton: {
+    alignItems: 'center',
+    borderRadius: 12,
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
+  },
   itemName: {
     color: TkimphPalette.ink,
     fontSize: 16,
     fontWeight: '900',
   },
-  itemHeader: {
-    alignItems: 'center',
+  dishCard: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#EAEEF4',
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 12,
+    padding: 12,
+    ...Platform.select({
+      web: { boxShadow: '0 4px 12px rgba(16, 24, 40, 0.05)' },
+      default: {
+        elevation: 2,
+        shadowColor: '#101828',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+      },
+    }),
+  },
+  dishCardMuted: {
+    backgroundColor: '#FAFBFC',
+  },
+  dishRow: {
     flexDirection: 'row',
     gap: 12,
   },
-  itemInfo: {
+  dishInfo: {
     flex: 1,
+    gap: 6,
+  },
+  dishNameRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'space-between',
+  },
+  dishMetaRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  dishPrice: {
+    color: TkimphPalette.ink,
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  categoryChip: {
+    backgroundColor: '#F1F5F9',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  categoryChipText: {
+    color: '#475467',
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'capitalize',
+  },
+  discountChip: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#E6F8EC',
+    borderRadius: 999,
+    flexDirection: 'row',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  discountChipText: {
+    color: TkimphPalette.green,
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  availPill: {
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  availPillText: {
+    fontSize: 10,
+    fontWeight: '900',
+  },
+  dishActions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'space-between',
+    marginTop: 12,
+  },
+  dishHint: {
+    color: TkimphPalette.muted,
+    fontSize: 11,
+    fontWeight: '800',
+    marginTop: 6,
   },
   itemImage: {
     backgroundColor: '#EEF2F6',
-    borderRadius: 12,
-    height: 74,
-    width: 74,
+    borderRadius: 14,
+    height: 86,
+    width: 86,
   },
   itemImageEmpty: {
     alignItems: 'center',
     backgroundColor: '#F1F5F9',
     borderColor: '#E2E8F0',
-    borderRadius: 12,
+    borderRadius: 14,
+    borderStyle: 'dashed',
     borderWidth: 1,
-    height: 74,
+    height: 86,
     justifyContent: 'center',
-    width: 74,
+    width: 86,
   },
   meta: {
     color: TkimphPalette.muted,
@@ -961,21 +1302,11 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     marginTop: 5,
   },
-  discount: {
-    color: TkimphPalette.green,
-    fontSize: 12,
-    fontWeight: '900',
-    marginTop: 5,
-  },
   cardActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
     marginTop: 12,
-  },
-  addItemRow: {
-    alignItems: 'flex-end',
-    marginBottom: 10,
   },
   modalBackdrop: {
     alignItems: 'center',

@@ -1,5 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ComponentProps, useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Card, MobileShell } from '@/components/mobile-shell';
@@ -220,11 +220,11 @@ export default function RestaurantScreen() {
       )}
 
       <View style={styles.metrics}>
-        <PartnerMetricCard label="Live orders" value={String(liveOrders.length)} icon="receipt-long" />
-        <PartnerMetricCard label="Pending" value={String(pendingOrders.length)} icon="pending-actions" />
-        <PartnerMetricCard label="Ready" value={String(readyOrders.length)} icon="shopping-bag" />
-        <PartnerMetricCard label="Today sales" value={formatPartnerMoney(todaySales)} icon="payments" />
-        <PartnerMetricCard label="Unread alerts" value={String(unreadCount)} icon="notifications" />
+        <PartnerMetricCard tone="green" label="Live orders" value={String(liveOrders.length)} icon="receipt-long" />
+        <PartnerMetricCard tone="yellow" label="Pending" value={String(pendingOrders.length)} icon="pending-actions" />
+        <PartnerMetricCard tone="blue" label="Ready" value={String(readyOrders.length)} icon="shopping-bag" />
+        <PartnerMetricCard tone="violet" label="Today sales" value={formatPartnerMoney(todaySales)} icon="payments" />
+        <PartnerMetricCard tone="red" label="Unread alerts" value={String(unreadCount)} icon="notifications" />
       </View>
 
       {earnings ? (
@@ -319,24 +319,37 @@ function RestaurantStatusCard({
   onResume: () => void;
 }) {
   const isOpen = restaurant.operating_status === 'open';
+  const accent = isOpen ? TkimphPalette.green : '#D97706';
   return (
-    <Card>
-      <View style={styles.rowBetween}>
+    <View style={[styles.statusCard, { borderTopColor: accent }]}>
+      <View style={styles.statusHead}>
         <View style={styles.flex}>
           <Text style={styles.storeName}>{restaurant.name}</Text>
-          <Text style={styles.meta}>{restaurant.address || 'No address set'}</Text>
+          <View style={styles.addressRow}>
+            <MaterialIcons color={TkimphPalette.muted} name="place" size={14} />
+            <Text style={styles.address}>{restaurant.address || 'No address set'}</Text>
+          </View>
         </View>
-        <StatusChip tone={isOpen ? 'green' : 'yellow'}>{storeStatusLabel(restaurant.operating_status)}</StatusChip>
+        <View style={[styles.openPill, { backgroundColor: isOpen ? '#E8F3ED' : '#FEF3C7', borderColor: accent }]}>
+          <View style={[styles.openDot, { backgroundColor: accent }]} />
+          <Text style={[styles.openPillText, { color: accent }]}>
+            {storeStatusLabel(restaurant.operating_status)}
+          </Text>
+        </View>
       </View>
-      <View style={styles.storeFacts}>
-        <View style={styles.factRow}>
-          <MaterialIcons color={restaurant.publicly_orderable ? TkimphPalette.green : '#92400E'} name="public" size={18} />
-          <Text style={styles.factText}>{restaurant.publicly_orderable ? 'Public ordering enabled' : 'Public ordering unavailable'}</Text>
-        </View>
-        <View style={styles.factRow}>
-          <MaterialIcons color={restaurant.readiness_status === 'ready' ? TkimphPalette.green : '#92400E'} name="fact-check" size={18} />
-          <Text style={styles.factText}>{restaurant.readiness_status === 'ready' ? 'Ready for customers' : 'Needs setup before ordering'}</Text>
-        </View>
+      <View style={styles.factsBox}>
+        <FactPill
+          ok={!!restaurant.publicly_orderable}
+          okIcon="public"
+          okLabel="Public ordering enabled"
+          warnLabel="Public ordering unavailable"
+        />
+        <FactPill
+          ok={restaurant.readiness_status === 'ready'}
+          okIcon="fact-check"
+          okLabel="Ready for customers"
+          warnLabel="Needs setup before ordering"
+        />
       </View>
       {!canSelfPause ? <PartnerNotice tone="warning" text="Store open/close is locked by admin settings." /> : null}
       {canSelfPause && !isOpen ? (
@@ -354,13 +367,123 @@ function RestaurantStatusCard({
           <PartnerActionButton label="Close store" icon="storefront" tone="yellow" disabled={pending} onPress={onPause} />
         </View>
       ) : null}
-    </Card>
+    </View>
+  );
+}
+
+function FactPill({
+  ok,
+  okIcon,
+  okLabel,
+  warnLabel,
+}: {
+  ok: boolean;
+  okIcon: ComponentProps<typeof MaterialIcons>['name'];
+  okLabel: string;
+  warnLabel: string;
+}) {
+  const accent = ok ? TkimphPalette.green : '#D97706';
+  const bg = ok ? '#F0F9F3' : '#FFFBEB';
+  return (
+    <View style={[styles.factPill, { backgroundColor: bg }]}>
+      <View style={[styles.factPillIcon, { backgroundColor: '#FFFFFF', borderColor: accent }]}>
+        <MaterialIcons color={accent} name={ok ? okIcon : 'warning-amber'} size={14} />
+      </View>
+      <Text style={[styles.factPillText, { color: ok ? TkimphPalette.ink : '#92400E' }]}>
+        {ok ? okLabel : warnLabel}
+      </Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   hero: {
     gap: 0,
+  },
+  statusCard: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#EAEEF4',
+    borderRadius: 18,
+    borderTopWidth: 4,
+    borderWidth: 1,
+    marginTop: 12,
+    padding: 16,
+    ...Platform.select({
+      web: { boxShadow: '0 6px 18px rgba(16, 24, 40, 0.06)' },
+      default: {
+        elevation: 2,
+        shadowColor: '#101828',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.06,
+        shadowRadius: 14,
+      },
+    }),
+  },
+  statusHead: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'space-between',
+  },
+  addressRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 4,
+    marginTop: 4,
+  },
+  address: {
+    color: TkimphPalette.muted,
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 18,
+  },
+  openPill: {
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  openDot: {
+    borderRadius: 4,
+    height: 8,
+    width: 8,
+  },
+  openPillText: {
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'capitalize',
+  },
+  factsBox: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    gap: 8,
+    marginTop: 14,
+    padding: 10,
+  },
+  factPill: {
+    alignItems: 'center',
+    borderRadius: 10,
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  factPillIcon: {
+    alignItems: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+    height: 24,
+    justifyContent: 'center',
+    width: 24,
+  },
+  factPillText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '800',
   },
   metrics: {
     flexDirection: 'row',
@@ -401,21 +524,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 19,
     marginTop: 5,
-  },
-  storeFacts: {
-    gap: 8,
-    marginTop: 14,
-  },
-  factRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8,
-  },
-  factText: {
-    color: TkimphPalette.ink,
-    flex: 1,
-    fontSize: 13,
-    fontWeight: '800',
   },
   pauseBox: {
     gap: 10,
