@@ -60,11 +60,41 @@ export function StatusChip({ children, tone = 'neutral' }: PropsWithChildren<{ t
   );
 }
 
-export function PartnerMetricCard({ label, value, icon }: { label: string; value: string; icon: ComponentProps<typeof MaterialIcons>['name'] }) {
+type MetricTone = 'green' | 'yellow' | 'blue' | 'red' | 'violet';
+
+const METRIC_TONES: Record<MetricTone, { fg: string; bg: string; accent: string }> = {
+  green: { fg: TkimphPalette.green, bg: '#E8F3ED', accent: '#1E8544' },
+  yellow: { fg: '#92400E', bg: '#FEF3C7', accent: '#D97706' },
+  blue: { fg: '#1D4ED8', bg: '#DBEAFE', accent: '#2563EB' },
+  red: { fg: '#B91C1C', bg: '#FEE2E2', accent: '#DC2626' },
+  violet: { fg: '#6D28D9', bg: '#EDE9FE', accent: '#7C3AED' },
+};
+
+export function PartnerMetricCard({
+  label,
+  value,
+  icon,
+  tone = 'green',
+  trend,
+}: {
+  label: string;
+  value: string;
+  icon: ComponentProps<typeof MaterialIcons>['name'];
+  tone?: MetricTone;
+  trend?: string;
+}) {
+  const palette = METRIC_TONES[tone];
   return (
-    <View style={styles.metricCard}>
-      <View style={styles.metricIcon}>
-        <MaterialIcons color={TkimphPalette.green} name={icon} size={20} />
+    <View style={[styles.metricCard, { borderTopColor: palette.accent, borderTopWidth: 3 }]}>
+      <View style={styles.metricHeader}>
+        <View style={[styles.metricIcon, { backgroundColor: palette.bg }]}>
+          <MaterialIcons color={palette.fg} name={icon} size={20} />
+        </View>
+        {trend ? (
+          <View style={[styles.metricTrend, { backgroundColor: palette.bg }]}>
+            <Text style={[styles.metricTrendText, { color: palette.fg }]}>{trend}</Text>
+          </View>
+        ) : null}
       </View>
       <Text style={styles.metricValue}>{value}</Text>
       <Text style={styles.metricLabel}>{label}</Text>
@@ -139,36 +169,50 @@ const styles = StyleSheet.create({
   metricCard: {
     backgroundColor: '#FFFFFF',
     borderColor: '#EAEEF4',
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     flexBasis: '47%',
     flexGrow: 1,
-    minHeight: 104,
-    padding: 13,
+    minHeight: 112,
+    padding: 14,
     ...Platform.select({
-      web: { boxShadow: '0 4px 10px rgba(16, 24, 40, 0.07)' },
+      web: { boxShadow: '0 6px 16px rgba(16, 24, 40, 0.06)' },
       default: {
         elevation: 2,
         shadowColor: '#101828',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.07,
-        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.06,
+        shadowRadius: 14,
       },
     }),
   },
+  metricHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
   metricIcon: {
     alignItems: 'center',
-    backgroundColor: '#E8F3ED',
     borderRadius: 16,
-    height: 34,
+    height: 38,
     justifyContent: 'center',
-    width: 34,
+    width: 38,
+  },
+  metricTrend: {
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  metricTrendText: {
+    fontSize: 10,
+    fontWeight: '900',
   },
   metricValue: {
     color: TkimphPalette.ink,
-    fontSize: 21,
+    fontSize: 24,
     fontWeight: '900',
-    marginTop: 9,
+    letterSpacing: -0.5,
+    marginTop: 10,
   },
   metricLabel: {
     color: TkimphPalette.muted,

@@ -2,7 +2,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { Card, MobileShell } from '@/components/mobile-shell';
+import { MobileShell } from '@/components/mobile-shell';
 import {
   formatPartnerMoney,
   formatPartnerStatus,
@@ -13,7 +13,7 @@ import {
   partnerStatusTone,
   StatusChip,
 } from '@/components/restaurant-workflow';
-import { BodyText, Kicker, ScreenTitle, SectionHeader } from '@/components/ui-kit';
+import { BodyText, Kicker, ScreenTitle } from '@/components/ui-kit';
 import { TkimphPalette } from '@/constants/theme';
 import { hasRestaurantOwnerSession, useAuthSession } from '@/hooks/use-auth-session';
 import { fetchPartnerOrders, PartnerOrder, updatePartnerOrderStatus } from '@/lib/api';
@@ -155,9 +155,15 @@ export default function RestaurantOrdersScreen() {
           const active = filter === item.key;
           const count = orders.filter((order) => matchesFilter(order, item.key)).length;
           return (
-            <Pressable key={item.key} onPress={() => setFilter(item.key)} style={[styles.filterButton, active && styles.filterButtonActive]}>
+            <Pressable
+              key={item.key}
+              onPress={() => setFilter(item.key)}
+              style={[styles.filterButton, active && styles.filterButtonActive]}
+            >
               <Text style={[styles.filterText, active && styles.filterTextActive]}>{item.label}</Text>
-              <Text style={[styles.filterCount, active && styles.filterTextActive]}>{count}</Text>
+              <View style={[styles.filterCountPill, active && styles.filterCountPillActive]}>
+                <Text style={[styles.filterCountText, active && styles.filterCountTextActive]}>{count}</Text>
+              </View>
             </Pressable>
           );
         })}
@@ -168,7 +174,13 @@ export default function RestaurantOrdersScreen() {
         <PartnerActionButton compact tone="outline" icon="refresh" label="Refresh" disabled={refreshing} onPress={() => void loadOrders(true, 1)} />
       </View>
 
-      <SectionHeader title="Orders" action={formatPartnerStatus(filter)} />
+      <View style={styles.ordersHeader}>
+        <Text style={styles.ordersTitle}>Orders</Text>
+        <View style={styles.liveBadge}>
+          <View style={styles.liveDot} />
+          <Text style={styles.liveBadgeText}>{formatPartnerStatus(filter)}</Text>
+        </View>
+      </View>
       {visibleOrders.length === 0 ? (
         <PartnerEmpty icon="receipt-long" title="No orders here" text="Orders appear automatically as customers place them." />
       ) : (
@@ -210,6 +222,17 @@ export default function RestaurantOrdersScreen() {
   );
 }
 
+const STATUS_ACCENT: Record<string, string> = {
+  pending: '#D97706',
+  accepted: '#D97706',
+  preparing: '#D97706',
+  ready: '#1D4ED8',
+  out_for_delivery: '#1D4ED8',
+  completed: TkimphPalette.green,
+  cancelled: '#B91C1C',
+  failed: '#B91C1C',
+};
+
 function OrderCard({
   order,
   acting,
@@ -222,25 +245,80 @@ function OrderCard({
   onUpdate: (status: string) => void;
 }) {
   const next = nextPartnerStatus(order.status);
+  const accent = STATUS_ACCENT[order.status] ?? TkimphPalette.muted;
+  const paid = (order.payment_status || '').toLowerCase() === 'paid';
   return (
-    <Card>
+    <View style={[styles.orderCard, { borderLeftColor: accent }]}>
       <Pressable accessibilityRole="button" onPress={onOpen}>
         <View style={styles.rowBetween}>
-          <Text style={styles.orderNumber}>{order.order_number}</Text>
+          <Text numberOfLines={1} style={styles.orderNumber}>{order.order_number}</Text>
           <StatusChip tone={partnerStatusTone(order.status)}>{formatPartnerStatus(order.status)}</StatusChip>
         </View>
-        <Text style={styles.meta}>{order.customer?.name || 'Customer'} | {order.customer?.phone || 'No phone'} | {order.delivery_mode}</Text>
-        <View style={styles.orderFacts}>
-          <Text style={styles.fact}>{order.items?.length ?? 0} items</Text>
-          <Text style={styles.fact}>{order.payment_status || 'payment pending'}</Text>
-          <Text style={styles.fact}>{formatPartnerMoney(order.total)}</Text>
+
+        <View style={styles.customerRow}>
+          <MaterialIcons color={TkimphPalette.muted} name="person" size={14} />
+          <Text style={styles.customerText} numberOfLines={1}>
+            {order.customer?.name || 'Customer'}
+          </Text>
+          <View style={styles.metaDot} />
+          <MaterialIcons color={TkimphPalette.muted} name="call" size={13} />
+          <Text style={styles.customerText} numberOfLines={1}>
+            {order.customer?.phone || 'No phone'}
+          </Text>
+          <View style={styles.metaDot} />
+          <MaterialIcons
+            color={TkimphPalette.muted}
+            name={order.delivery_mode === 'pickup' ? 'storefront' : 'two-wheeler'}
+            size={13}
+          />
+          <Text style={styles.customerText} numberOfLines={1}>
+            {order.delivery_mode}
+          </Text>
+        </View>
+
+        <View style={styles.statStrip}>
+          <View style={styles.statPill}>
+            <MaterialIcons color="#475467" name="restaurant-menu" size={12} />
+            <Text style={styles.statPillText}>{order.items?.length ?? 0} items</Text>
+          </View>
+          <View
+            style={[
+              styles.statPill,
+              { backgroundColor: paid ? '#E6F8EC' : '#FEF3C7' },
+            ]}
+          >
+            <MaterialIcons
+              color={paid ? TkimphPalette.green : '#92400E'}
+              name={paid ? 'check-circle' : 'schedule'}
+              size={12}
+            />
+            <Text
+              style={[
+                styles.statPillText,
+                { color: paid ? TkimphPalette.green : '#92400E' },
+              ]}
+            >
+              {order.payment_status || 'pending'}
+            </Text>
+          </View>
+          <View style={styles.totalPill}>
+            <Text style={styles.totalPillText}>{formatPartnerMoney(order.total)}</Text>
+          </View>
         </View>
       </Pressable>
       <View style={styles.cardActions}>
         <PartnerActionButton compact tone="outline" icon="visibility" label="Details" onPress={onOpen} />
-        {next ? <PartnerActionButton compact icon={next.icon} label={acting ? 'Updating' : next.label} disabled={acting} onPress={() => onUpdate(next.status)} /> : null}
+        {next ? (
+          <PartnerActionButton
+            compact
+            icon={next.icon}
+            label={acting ? 'Updating' : next.label}
+            disabled={acting}
+            onPress={() => onUpdate(next.status)}
+          />
+        ) : null}
       </View>
-    </Card>
+    </View>
   );
 }
 
@@ -357,29 +435,46 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderColor: '#EAEEF4',
-    borderRadius: 14,
+    borderRadius: 999,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: 7,
-    minHeight: 42,
-    paddingHorizontal: 12,
+    gap: 8,
+    minHeight: 40,
+    paddingLeft: 14,
+    paddingRight: 6,
+    paddingVertical: 6,
   },
   filterButtonActive: {
-    backgroundColor: '#E8F3ED',
+    backgroundColor: TkimphPalette.green,
     borderColor: TkimphPalette.green,
   },
   filterText: {
-    color: TkimphPalette.muted,
+    color: TkimphPalette.ink,
     fontSize: 13,
     fontWeight: '900',
   },
   filterTextActive: {
-    color: TkimphPalette.green,
+    color: '#FFFFFF',
   },
-  filterCount: {
-    color: TkimphPalette.muted,
+  filterCountPill: {
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 999,
+    justifyContent: 'center',
+    minWidth: 24,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  filterCountPillActive: {
+    backgroundColor: 'rgba(255,255,255,0.22)',
+  },
+  filterCountText: {
+    color: '#475467',
     fontSize: 12,
     fontWeight: '900',
+  },
+  filterCountTextActive: {
+    color: '#FFFFFF',
   },
   refreshRow: {
     alignItems: 'center',
@@ -392,6 +487,39 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     fontWeight: '800',
+  },
+  ordersHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    marginTop: 18,
+  },
+  ordersTitle: {
+    color: TkimphPalette.ink,
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  liveBadge: {
+    alignItems: 'center',
+    backgroundColor: '#E8F3ED',
+    borderRadius: 999,
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  liveDot: {
+    backgroundColor: TkimphPalette.green,
+    borderRadius: 4,
+    height: 7,
+    width: 7,
+  },
+  liveBadgeText: {
+    color: TkimphPalette.green,
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'capitalize',
   },
   rowBetween: {
     alignItems: 'center',
@@ -415,20 +543,75 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     marginTop: 5,
   },
-  orderFacts: {
+  orderCard: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#EAEEF4',
+    borderLeftWidth: 4,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 12,
+    padding: 14,
+    ...Platform.select({
+      web: { boxShadow: '0 4px 12px rgba(16, 24, 40, 0.05)' },
+      default: {
+        elevation: 2,
+        shadowColor: '#101828',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+      },
+    }),
+  },
+  customerRow: {
+    alignItems: 'center',
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 10,
+    gap: 5,
+    marginTop: 8,
   },
-  fact: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 10,
-    color: TkimphPalette.ink,
+  customerText: {
+    color: '#475467',
     fontSize: 12,
+    fontWeight: '700',
+  },
+  metaDot: {
+    backgroundColor: '#C7CCD6',
+    borderRadius: 2,
+    height: 3,
+    width: 3,
+  },
+  statStrip: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 12,
+  },
+  statPill: {
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 999,
+    flexDirection: 'row',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  statPillText: {
+    color: '#475467',
+    fontSize: 12,
+    fontWeight: '800',
+    textTransform: 'capitalize',
+  },
+  totalPill: {
+    backgroundColor: '#E8F3ED',
+    borderRadius: 999,
+    marginLeft: 'auto',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  totalPillText: {
+    color: TkimphPalette.green,
+    fontSize: 13,
     fontWeight: '900',
-    paddingHorizontal: 9,
-    paddingVertical: 6,
   },
   cardActions: {
     flexDirection: 'row',

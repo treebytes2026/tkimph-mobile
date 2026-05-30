@@ -33,6 +33,7 @@ export default function RootLayout() {
           <Stack.Screen name="account/profile" options={{ headerShown: false }} />
           <Stack.Screen name="account/password" options={{ headerShown: false }} />
           <Stack.Screen name="account/support" options={{ headerShown: false }} />
+          <Stack.Screen name="legal/[slug]" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
         </Stack>
         <StatusBar style="auto" />
